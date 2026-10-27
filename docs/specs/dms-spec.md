@@ -44,6 +44,8 @@ Permitir que usuários enviem, listem e baixem seus documentos, com arquivos arm
 | RNF-06 | Erros HTTP usam um formato JSON estável e não expõem detalhes internos do servidor. |
 
 Configuração: `PORT` (padrão `3000`), `STORAGE_DIR` (padrão `backend/storage`) e `MAX_FILE_SIZE_BYTES` (padrão `10485760`, equivalente a 10 MiB).
+O limite de tamanho é inclusivo: um arquivo com exatamente `MAX_FILE_SIZE_BYTES`
+bytes é aceito; a partir de um byte excedente, o upload é rejeitado.
 
 ## 5. Modelo de dados
 
@@ -78,6 +80,10 @@ As rotas do backend não incluem `/api`; no desenvolvimento, o proxy do Vite enc
 
 - Sucesso: `200 OK`, conteúdo binário e nome original como nome de download.
 - Erro: `404 Not Found` se o documento não existir ou não pertencer ao usuário.
+- Se o arquivo tiver sido removido do disco, o download também retorna `404`.
+
+Falhas inesperadas de leitura ou gravação retornam `500` com código `INTERNAL_ERROR`
+e são registradas no servidor, sem expor caminhos físicos na resposta.
 
 Formato de erro: `{ "error": { "code": "FILE_REQUIRED", "message": "Envie um arquivo no campo file." } }`. Códigos usados incluem `USER_ID_REQUIRED`, `FILE_REQUIRED`, `FILE_TOO_LARGE`, `INVALID_UPLOAD`, `DOCUMENT_NOT_FOUND` e `INTERNAL_ERROR`.
 
@@ -86,6 +92,8 @@ Formato de erro: `{ "error": { "code": "FILE_REQUIRED", "message": "Envie um arq
 - Backend CommonJS organizado em `routes -> controllers -> services -> repositories`.
 - Rotas configuram HTTP e Multer; controllers validam entrada e formatam respostas; services aplicam regras de negócio; repositories encapsulam metadados em memória.
 - Frontend React usa `fetch` pelo prefixo `/api` configurado no proxy do Vite.
+- `App` monta `DocumentsPage`, que coordena o usuário selecionado, a lista e as operações. `UploadComponent` trata o formulário de envio; `DocumentList` apresenta os metadados e reutiliza `DownloadButton` para cada arquivo.
+- O cliente `frontend/src/services/documents.js` centraliza as chamadas com `X-User-Id`, o envio de `FormData`, o recebimento do download como `Blob` e os erros HTTP. A página inicia o download com o nome original e libera a URL temporária.
 - Arquivos locais e metadados em memória não têm garantia de consistência após reinicialização: um arquivo pode permanecer no disco sem metadado correspondente.
 - O identificador de usuário é uma convenção para esta versão e não deve ser considerado controle de acesso de produção.
 
@@ -95,4 +103,4 @@ Formato de erro: `{ "error": { "code": "FILE_REQUIRED", "message": "Envie um arq
 2. Implementar persistência dos arquivos locais com Multer e metadados em memória.
 3. Implementar upload, listagem por usuário e download com verificação de propriedade.
 4. Integrar a interface para seleção de usuário, upload, listagem e download via API.
-5. Validar os fluxos e erros com testes automatizados de backend e build de produção do frontend.
+5. Validar os fluxos e erros com testes automatizados de backend, testes do cliente de API (`cd frontend && npm test`) e build de produção do frontend (`cd frontend && npm run build`).

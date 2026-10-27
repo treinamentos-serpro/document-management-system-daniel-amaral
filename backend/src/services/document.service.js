@@ -1,10 +1,7 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const documentRepository = require('../repositories/document.repository');
-
-const storageDirectory = path.resolve(
-  process.env.STORAGE_DIR || path.join(__dirname, '../../storage'),
-);
+const { storageDirectory } = require('../config/storage');
 
 function toPublicDocument(document) {
   const { storageName, ...publicDocument } = document;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DocumentList from '../components/DocumentList.jsx';
 import UploadComponent from '../components/UploadComponent.jsx';
 import { downloadDocument, listDocuments, uploadDocument } from '../services/documents.js';
@@ -9,6 +9,7 @@ const savedUserId = localStorage.getItem('dms-user-id') || 'usuario-1';
 export default function DocumentsPage() {
   const [userIdDraft, setUserIdDraft] = useState(savedUserId);
   const [userId, setUserId] = useState(savedUserId);
+  const activeUserId = useRef(savedUserId);
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState('');
@@ -33,13 +34,22 @@ export default function DocumentsPage() {
       return;
     }
     localStorage.setItem('dms-user-id', nextUserId);
+    if (nextUserId !== userId) {
+      activeUserId.current = nextUserId;
+      setDocuments([]);
+      setIsLoading(true);
+      setError('');
+    }
     setUserId(nextUserId);
   }
 
   async function handleUpload(file) {
-    const document = await uploadDocument(userId, file);
-    setDocuments((currentDocuments) => [document, ...currentDocuments]);
-    setError('');
+    const uploadUserId = userId;
+    const document = await uploadDocument(uploadUserId, file);
+    if (uploadUserId === activeUserId.current) {
+      setDocuments((currentDocuments) => [document, ...currentDocuments]);
+      setError('');
+    }
   }
 
   async function handleDownload(document) {
